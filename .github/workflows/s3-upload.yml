@@ -10,7 +10,7 @@ jobs:
 
     env:
       AWS_REGION: ap-south-1
-      S3_BUCKET: your-bucket-name  # ← Replace
+      S3_BUCKET: newmaterial  # ← Changed this to your actual bucket name
 
     steps:
     - name: Checkout code
@@ -30,10 +30,11 @@ jobs:
       run: |
         python random_forest_insurance.py
 
-    - name: Upload model to S3
-      run: |
-        aws s3 cp random_forest_model.pkl s3://$S3_BUCKET/
-        aws s3 cp insurance_predictions.csv s3://$S3_BUCKET/
+    - name: Upload model and predictions to S3
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: ${{ env.AWS_REGION }}
+      run: |
+        aws s3 cp random_forest_model.pkl s3://$S3_BUCKET/
+        aws s3 cp insurance_predictions.csv s3://$S3_BUCKET/
