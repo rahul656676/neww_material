@@ -7,37 +7,44 @@ import joblib
 
 # Load dataset
 df = pd.read_csv("insurance_predictions.csv")
+
+# Show column names
 print("Columns in the dataset:", df.columns)
 
 # Clean column names
 df.columns = df.columns.str.strip().str.lower()
 
-# Ensure required columns exist
-required_cols = ['age', 'sex', 'bmi', 'children', 'smoker', 'charges']
+# Drop 'predicted_charges' column if already exists (for retraining)
+if 'predicted_charges' in df.columns:
+    df.drop(columns=['predicted_charges'], inplace=True)
+
+# Drop columns that are entirely missing
+for col in ['sex', 'smoker']:
+    if col in df.columns and df[col].isnull().all():
+        print(f"Warning: Dropping column '{col}' because it has all missing values.")
+        df.drop(columns=[col], inplace=True)
+
+# Handle non-empty categorical columns
+if 'sex' in df.columns:
+    df['sex'] = df['sex'].fillna(df['sex'].mode()[0])
+    df['sex'] = df['sex'].astype(str).str.lower().map({'male': 0, 'female': 1})
+
+if 'smoker' in df.columns:
+    df['smoker'] = df['smoker'].fillna(df['smoker'].mode()[0])
+    df['smoker'] = df['smoker'].astype(str).str.lower().map({'no': 0, 'yes': 1})
+
+# Check required columns
+required_cols = ['age', 'bmi', 'children', 'charges']
 for col in required_cols:
     if col not in df.columns:
         raise KeyError(f"Missing required column: {col}")
 
-# Fill missing 'sex' and 'smoker' if possible
-for col in ['sex', 'smoker']:
-    if df[col].isnull().all():
-        raise ValueError(f"Column '{col}' has all missing values.")
-    df[col] = df[col].fillna(df[col].mode()[0])
-
-# Convert to numeric
-df['sex'] = df['sex'].astype(str).str.lower().map({'male': 0, 'female': 1})
-df['smoker'] = df['smoker'].astype(str).str.lower().map({'no': 0, 'yes': 1})
-
-if df['sex'].isnull().any() or df['smoker'].isnull().any():
-    raise ValueError("Failed to map some 'sex' or 'smoker' values.")
-
-# Drop predicted column if exists
-if 'predicted_charges' in df.columns:
-    df = df.drop('predicted_charges', axis=1)
-
 # Features and target
 X = df.drop('charges', axis=1)
 y = df['charges']
+
+# Print final columns used
+print("Final features used for training:", X.columns.tolist())
 
 # Train model
 model = RandomForestRegressor(random_state=42)
