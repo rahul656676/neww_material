@@ -7,28 +7,31 @@ import joblib
 
 # Load dataset
 df = pd.read_csv("insurance_predictions.csv")
-
-# Show column names
 print("Columns in the dataset:", df.columns)
 
 # Clean column names
 df.columns = df.columns.str.strip().str.lower()
 
-# Ensure necessary columns exist
+# Ensure required columns exist
 required_cols = ['age', 'sex', 'bmi', 'children', 'smoker', 'charges']
 for col in required_cols:
     if col not in df.columns:
         raise KeyError(f"Missing required column: {col}")
 
-# Fill missing values
-df['sex'] = df['sex'].fillna(df['sex'].mode()[0])
-df['smoker'] = df['smoker'].fillna(df['smoker'].mode()[0])
+# Fill missing 'sex' and 'smoker' if possible
+for col in ['sex', 'smoker']:
+    if df[col].isnull().all():
+        raise ValueError(f"Column '{col}' has all missing values.")
+    df[col] = df[col].fillna(df[col].mode()[0])
 
 # Convert to numeric
 df['sex'] = df['sex'].astype(str).str.lower().map({'male': 0, 'female': 1})
 df['smoker'] = df['smoker'].astype(str).str.lower().map({'no': 0, 'yes': 1})
 
-# Drop predicted column if it exists (retraining)
+if df['sex'].isnull().any() or df['smoker'].isnull().any():
+    raise ValueError("Failed to map some 'sex' or 'smoker' values.")
+
+# Drop predicted column if exists
 if 'predicted_charges' in df.columns:
     df = df.drop('predicted_charges', axis=1)
 
@@ -61,6 +64,6 @@ df['predicted_charges'] = best_model.predict(X)
 df.to_csv("insurance_predictions.csv", index=False)
 print("Saved predictions to insurance_predictions.csv")
 
-# Save the model
+# Save model
 joblib.dump(best_model, "random_forest_model.pkl")
 print("Model saved as random_forest_model.pkl")
